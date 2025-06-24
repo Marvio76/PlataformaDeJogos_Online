@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,15 +31,27 @@ const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
     setContent(userContent);
   };
 
-  const loadGames = () => {
-    const allGames = JSON.parse(localStorage.getItem('games') || '[]');
-    const userGames = allGames.filter(g => g.userId === user.id);
-    setGames(userGames);
+  const loadGames = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/api/games");
+      if (!response.ok) {
+        throw new Error('Erro ao buscar jogos do servidor');
+      }
+      const data = await response.json();
+      const userGames = data.filter(game => game.createdBy === user.id);
+      setGames(userGames);
+    } catch (error) {
+      toast({
+        title: "Erro ao carregar jogos",
+        description: error.message || "Não foi possível buscar os jogos do servidor.",
+        variant: "destructive",
+      });
+    }
   };
 
   const generateGame = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.title || !formData.type || content.length < 3) {
       toast({
         title: "Erro",
@@ -52,33 +63,47 @@ const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
 
     setIsGenerating(true);
 
-    setTimeout(() => {
-      const selectedContent = content.slice(0, Math.min(content.length, 10));
-      
-      const newGame = {
-        id: Date.now(),
-        userId: user.id,
-        title: formData.title,
-        description: formData.description,
-        type: formData.type,
-        difficulty: formData.difficulty,
-        content: selectedContent,
-        createdAt: new Date().toISOString()
-      };
+    const selectedContent = content.slice(0, Math.min(content.length, 10));
 
-      const allGames = JSON.parse(localStorage.getItem('games') || '[]');
-      allGames.push(newGame);
-      localStorage.setItem('games', JSON.stringify(allGames));
+    const newGame = {
+      title: formData.title,
+      description: formData.description,
+      gameType: formData.type,
+      data: selectedContent,
+      createdBy: user.id,
+    };
 
-      toast({
-        title: "Jogo criado com sucesso!",
-        description: `${formData.title} está pronto para jogar.`,
+    try {
+      const response = await fetch("http://localhost:3001/api/games", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newGame),
       });
 
-      setFormData({ title: '', description: '', type: '', difficulty: 'medium' });
+      if (response.ok) {
+        toast({
+          title: "Jogo criado com sucesso!",
+          description: `${formData.title} está pronto para jogar.`,
+        });
+        setFormData({ title: '', description: '', type: '', difficulty: 'medium' });
+        loadGames();
+      } else {
+        const errorData = await response.json();
+        toast({
+          title: "Erro ao criar jogo",
+          description: errorData.message || "Erro desconhecido",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erro de conexão",
+        description: "Não foi possível se conectar ao servidor.",
+        variant: "destructive",
+      });
+    } finally {
       setIsGenerating(false);
-      loadGames();
-    }, 1000);
+    }
   };
 
   return (
@@ -118,32 +143,32 @@ const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
                     id="title"
                     placeholder="Digite o título..."
                     value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="description">Descrição</Label>
                   <Textarea
                     id="description"
                     placeholder="Descreva o jogo..."
                     value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   />
                 </div>
 
                 <div className="space-y-2">
-                   <Label>Tipo de Jogo</Label>
-                   <Select onValueChange={(value) => setFormData({...formData, type: value})} value={formData.type}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um tipo de jogo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="memory">Jogo da Memória</SelectItem>
-                        <SelectItem value="association">Jogo de Associação</SelectItem>
-                        <SelectItem value="quiz">Quiz</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <Label>Tipo de Jogo</Label>
+                  <Select onValueChange={(value) => setFormData({ ...formData, type: value })} value={formData.type}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um tipo de jogo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="memory">Jogo da Memória</SelectItem>
+                      <SelectItem value="association">Jogo de Associação</SelectItem>
+                      <SelectItem value="quiz">Quiz</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <Button
@@ -176,16 +201,13 @@ const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
                   </div>
                 ) : (
                   games.map((game) => (
-                    <div
-                      key={game.id}
-                      className="border rounded-lg p-4"
-                    >
+                    <div key={game._id} className="border rounded-lg p-4">
                       <div className="flex justify-between items-start">
                         <div>
                           <h3 className="font-semibold">{game.title}</h3>
                           <p className="text-sm text-gray-600">{game.description}</p>
                           <span className="text-xs text-gray-500 mt-1 inline-block">
-                            Tipo: {game.type}
+                            Tipo: {game.gameType}
                           </span>
                         </div>
                         <Button
