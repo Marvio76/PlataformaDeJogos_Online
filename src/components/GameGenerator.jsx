@@ -25,11 +25,23 @@ const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
     loadGames();
   }, [user.id]);
 
-  const loadContent = () => {
-    const allContent = JSON.parse(localStorage.getItem('content') || '[]');
-    const userContent = allContent.filter(c => c.userId === user.id);
-    setContent(userContent);
-  };
+  const loadContent = async () => {
+  try {
+    const response = await fetch(`http://localhost:3001/api/content?userId=${user.id}`);
+    if (!response.ok) {
+      throw new Error('Erro ao buscar conteúdos do servidor');
+    }
+    const data = await response.json();
+    setContent(data);
+  } catch (error) {
+    toast({
+      title: "Erro",
+      description: error.message || "Não foi possível carregar os conteúdos.",
+      variant: "destructive",
+    });
+  }
+};
+
 
   const loadGames = async () => {
     try {
