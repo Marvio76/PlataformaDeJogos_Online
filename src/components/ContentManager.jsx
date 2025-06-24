@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { ArrowLeft, Plus, Edit, Trash2, BookOpen, Search } from 'lucide-react';
+import axios from 'axios';
 
 const ContentManager = ({ user, onNavigate }) => {
   const [content, setContent] = useState([]);
@@ -23,15 +23,24 @@ const ContentManager = ({ user, onNavigate }) => {
     loadContent();
   }, [user.id]);
 
-  const loadContent = () => {
-    const allContent = JSON.parse(localStorage.getItem('content') || '[]');
-    const userContent = allContent.filter(c => c.userId === user.id);
-    setContent(userContent);
+  const loadContent = async () => {
+    try {
+      const response = await axios.get('http://localhost:3001/api/content');
+      // Filtra o conteúdo criado pelo usuário logado
+      const userContent = response.data.filter(c => c.createdBy === user.id);
+      setContent(userContent);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os conteúdos.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.term.trim() || !formData.definition.trim()) {
       toast({
         title: "Erro",
@@ -41,66 +50,76 @@ const ContentManager = ({ user, onNavigate }) => {
       return;
     }
 
-    const allContent = JSON.parse(localStorage.getItem('content') || '[]');
-    
-    if (isEditing) {
-      const updatedContent = allContent.map(c => 
-        c.id === editingId 
-          ? { ...c, term: formData.term, definition: formData.definition, updatedAt: new Date().toISOString() }
-          : c
-      );
-      localStorage.setItem('content', JSON.stringify(updatedContent));
-      
+    try {
+      if (isEditing) {
+        // Atualiza conteúdo via PUT na rota correta
+        await axios.put(`http://localhost:3001/api/content/${editingId}`, {
+          title: formData.term,
+          description: formData.definition,
+          createdBy: user.id,
+          gameType: "term-definition"
+        });
+
+        toast({
+          title: "Sucesso!",
+          description: "Conteúdo atualizado com sucesso",
+        });
+      } else {
+        // Cria novo conteúdo via POST na rota correta
+        await axios.post('http://localhost:3001/api/content', {
+          title: formData.term,
+          description: formData.definition,
+          createdBy: user.id,
+          gameType: "term-definition"
+        });
+
+        toast({
+          title: "Sucesso!",
+          description: "Conteúdo adicionado com sucesso",
+        });
+      }
+
+      setFormData({ term: '', definition: '' });
+      setIsEditing(false);
+      setEditingId(null);
+      loadContent();
+    } catch (error) {
       toast({
-        title: "Sucesso!",
-        description: "Conteúdo atualizado com sucesso",
-      });
-    } else {
-      const newContent = {
-        id: Date.now(),
-        userId: user.id,
-        term: formData.term,
-        definition: formData.definition,
-        createdAt: new Date().toISOString()
-      };
-      
-      allContent.push(newContent);
-      localStorage.setItem('content', JSON.stringify(allContent));
-      
-      toast({
-        title: "Sucesso!",
-        description: "Conteúdo adicionado com sucesso",
+        title: "Erro",
+        description: "Falha ao salvar conteúdo",
+        variant: "destructive",
       });
     }
-
-    setFormData({ term: '', definition: '' });
-    setIsEditing(false);
-    setEditingId(null);
-    loadContent();
   };
 
   const handleEdit = (item) => {
-    setFormData({ term: item.term, definition: item.definition });
+    setFormData({ term: item.title, definition: item.description });
     setIsEditing(true);
-    setEditingId(item.id);
+    setEditingId(item._id);
   };
 
-  const handleDelete = (id) => {
-    const allContent = JSON.parse(localStorage.getItem('content') || '[]');
-    const updatedContent = allContent.filter(c => c.id !== id);
-    localStorage.setItem('content', JSON.stringify(updatedContent));
-    
-    toast({
-      title: "Sucesso!",
-      description: "Conteúdo removido com sucesso",
-    });
-    
-    loadContent();
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`http://localhost:3001/api/content/${id}`);
+
+      toast({
+        title: "Sucesso!",
+        description: "Conteúdo removido com sucesso",
+      });
+
+      loadContent();
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao remover conteúdo",
+        variant: "destructive",
+      });
+    }
   };
 
   const filteredContent = content.filter(item =>
-    item.term.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.definition.toLowerCase().includes(searchTerm.toLowerCase())
+    item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -136,21 +155,21 @@ const ContentManager = ({ user, onNavigate }) => {
                     id="term"
                     placeholder="Digite o termo..."
                     value={formData.term}
-                    onChange={(e) => setFormData({...formData, term: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, term: e.target.value })}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="definition">Definição</Label>
                   <Textarea
                     id="definition"
                     placeholder="Digite a definição..."
                     value={formData.definition}
-                    onChange={(e) => setFormData({...formData, definition: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, definition: e.target.value })}
                     className="min-h-[100px]"
                   />
                 </div>
-                
+
                 <div className="flex gap-2">
                   <Button
                     type="submit"
@@ -158,7 +177,7 @@ const ContentManager = ({ user, onNavigate }) => {
                   >
                     {isEditing ? 'Atualizar' : 'Adicionar'}
                   </Button>
-                  
+
                   {isEditing && (
                     <Button
                       type="button"
@@ -207,11 +226,11 @@ const ContentManager = ({ user, onNavigate }) => {
                 ) : (
                   filteredContent.map((item) => (
                     <div
-                      key={item.id}
+                      key={item._id}
                       className="border rounded-lg p-4"
                     >
                       <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-semibold text-lg">{item.term}</h3>
+                        <h3 className="font-semibold text-lg">{item.title}</h3>
                         <div className="flex gap-2">
                           <Button
                             size="sm"
@@ -223,13 +242,13 @@ const ContentManager = ({ user, onNavigate }) => {
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => handleDelete(item.id)}
+                            onClick={() => handleDelete(item._id)}
                           >
                             <Trash2 className="w-3 h-3" />
                           </Button>
                         </div>
                       </div>
-                      <p className="text-gray-600">{item.definition}</p>
+                      <p className="text-gray-600">{item.description}</p>
                     </div>
                   ))
                 )}
