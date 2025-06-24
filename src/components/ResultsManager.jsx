@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,11 +5,25 @@ import { ArrowLeft, Trophy, Clock, Target } from 'lucide-react';
 
 const ResultsManager = ({ user, onNavigate }) => {
   const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const allResults = JSON.parse(localStorage.getItem('gameResults') || '[]');
-    const userResults = allResults.filter(r => r.userId === user.id);
-    setResults(userResults.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt)));
+    const fetchResults = async () => {
+      try {
+        const response = await fetch(`http://localhost:3001/results/${user.id}`);
+        const data = await response.json();
+        const sortedResults = data.sort(
+          (a, b) => new Date(b.completedAt) - new Date(a.completedAt)
+        );
+        setResults(sortedResults);
+      } catch (error) {
+        console.error('Erro ao buscar resultados:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchResults();
   }, [user.id]);
 
   const formatTime = (seconds) => {
@@ -46,54 +59,57 @@ const ResultsManager = ({ user, onNavigate }) => {
           <CardTitle>Histórico de Partidas</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4 max-h-[600px] overflow-y-auto">
-            {results.length > 0 ? results.map((result) => (
-              <div
-                key={result.id}
-                className="border rounded-lg p-4"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h3 className="font-semibold">{result.gameTitle}</h3>
-                    <p className="text-gray-500 text-sm">
-                      {new Date(result.completedAt).toLocaleDateString('pt-BR', {
-                        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                      })}
-                    </p>
+          {loading ? (
+            <div className="text-center text-gray-500 p-6">Carregando resultados...</div>
+          ) : results.length > 0 ? (
+            <div className="space-y-4 max-h-[600px] overflow-y-auto">
+              {results.map((result) => (
+                <div key={result.id} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h3 className="font-semibold">{result.gameTitle}</h3>
+                      <p className="text-gray-500 text-sm">
+                        {new Date(result.completedAt).toLocaleDateString('pt-BR', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </div>
+                    <span className="px-2 py-1 rounded bg-gray-200 text-gray-800 text-xs font-medium">
+                      {getGameTypeLabel(result.gameType)}
+                    </span>
                   </div>
-                  <span className="px-2 py-1 rounded bg-gray-200 text-gray-800 text-xs font-medium">
-                    {getGameTypeLabel(result.gameType)}
-                  </span>
+
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <Trophy className="w-5 h-5 text-yellow-500 mx-auto mb-1" />
+                      <p className="font-semibold">{result.score}</p>
+                      <p className="text-gray-500 text-xs">Pontos</p>
+                    </div>
+                    <div>
+                      <Clock className="w-5 h-5 text-blue-500 mx-auto mb-1" />
+                      <p className="font-semibold">{formatTime(result.timeElapsed)}</p>
+                      <p className="text-gray-500 text-xs">Tempo</p>
+                    </div>
+                    <div>
+                      <Target className="w-5 h-5 text-red-500 mx-auto mb-1" />
+                      <p className="font-semibold">{result.mistakes}</p>
+                      <p className="text-gray-500 text-xs">Erros</p>
+                    </div>
+                  </div>
                 </div>
-                
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <Trophy className="w-5 h-5 text-yellow-500 mx-auto mb-1" />
-                    <p className="font-semibold">{result.score}</p>
-                    <p className="text-gray-500 text-xs">Pontos</p>
-                  </div>
-                  <div>
-                    <Clock className="w-5 h-5 text-blue-500 mx-auto mb-1" />
-                    <p className="font-semibold">{formatTime(result.timeElapsed)}</p>
-                    <p className="text-gray-500 text-xs">Tempo</p>
-                  </div>
-                  <div>
-                    <Target className="w-5 h-5 text-red-500 mx-auto mb-1" />
-                    <p className="font-semibold">{result.mistakes}</p>
-                    <p className="text-gray-500 text-xs">Erros</p>
-                  </div>
-                </div>
-              </div>
-            )) : (
-              <div className="text-center py-12 text-gray-500">
-                <Trophy className="w-16 h-16 mx-auto mb-4" />
-                <p className="text-lg">Nenhum jogo jogado ainda</p>
-                <p className="text-sm mt-2">
-                  Jogue alguns jogos para ver seus resultados aqui!
-                </p>
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-gray-500">
+              <Trophy className="w-16 h-16 mx-auto mb-4" />
+              <p className="text-lg">Nenhum jogo jogado ainda</p>
+              <p className="text-sm mt-2">Jogue alguns jogos para ver seus resultados aqui!</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

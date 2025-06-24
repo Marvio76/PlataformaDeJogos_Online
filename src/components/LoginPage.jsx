@@ -1,103 +1,121 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
-import { Gamepad as GamepadIcon } from 'lucide-react';
+import { ArrowLeft, Gamepad2, Play, Zap } from 'lucide-react';
 
-const LoginPage = ({ onLogin }) => {
-  const [loginData, setLoginData] = useState({ email: '', password: '' });
-  const [registerData, setRegisterData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+const API_BASE = 'http://localhost:3001'; // ajuste conforme seu backend
+
+const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
+  const [content, setContent] = useState([]);
+  const [games, setGames] = useState([]);
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    type: '',
+    difficulty: 'medium',
+  });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
+  useEffect(() => {
+    if (!user?.id) return;
 
-    try {
-      const response = await fetch("http://localhost:3001/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: loginData.email,
-          senha: loginData.password
-        })
-      });
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [contentRes, gamesRes] = await Promise.all([
+          fetch(`${API_BASE}/content/${user.id}`),
+          fetch(`${API_BASE}/games/${user.id}`)
+        ]);
 
-      const data = await response.json();
+        if (!contentRes.ok) throw new Error('Erro ao carregar conteúdos');
+        if (!gamesRes.ok) throw new Error('Erro ao carregar jogos');
 
-      if (response.ok) {
+        const contentData = await contentRes.json();
+        const gamesData = await gamesRes.json();
+
+        setContent(Array.isArray(contentData) ? contentData : []);
+        setGames(Array.isArray(gamesData) ? gamesData : []);
+      } catch (error) {
         toast({
-          title: "Login realizado",
-          description: `Bem-vindo, ${data.usuario.nome}!`,
-        });
-        localStorage.setItem("token", data.token);
-        onLogin(data.usuario);
-      } else {
-        toast({
-          title: "Erro no login",
-          description: data.mensagem,
+          title: "Erro",
+          description: error.message,
           variant: "destructive",
         });
+        setContent([]);
+        setGames([]);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      toast({
-        title: "Erro na conexão",
-        description: "Não foi possível conectar ao servidor.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    };
+
+    fetchData();
+  }, [user, toast]);
+
+  const handleChange = (field) => (e) => {
+    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
   };
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const handleSelectChange = (value) => {
+    setFormData((prev) => ({ ...prev, type: value }));
+  };
 
-    if (registerData.password !== registerData.confirmPassword) {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!formData.title || !formData.type || content.length < 3) {
       toast({
-        title: "Erro no cadastro",
-        description: "As senhas não coincidem",
+        title: "Erro",
+        description: "Preencha todos os campos e tenha pelo menos 3 conteúdos cadastrados.",
         variant: "destructive",
       });
-      setIsLoading(false);
       return;
     }
 
+    setIsLoading(true);
+
     try {
-      const response = await fetch("http://localhost:3001/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nome: registerData.name,
-          email: registerData.email,
-          senha: registerData.password
-        })
+      const selectedContent = content.slice(0, 10);
+      const payload = {
+        userId: user.id,
+        title: formData.title,
+        description: formData.description,
+        type: formData.type,
+        difficulty: formData.difficulty,
+        content: selectedContent,
+      };
+
+      const res = await fetch(`${API_BASE}/games`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        toast({
-          title: "Cadastro realizado!",
-          description: "Agora você pode fazer login.",
-        });
-        setRegisterData({ name: '', email: '', password: '', confirmPassword: '' });
-      } else {
-        toast({
-          title: "Erro no cadastro",
-          description: data.mensagem,
-          variant: "destructive",
-        });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Erro ao criar jogo');
       }
+
+      toast({
+        title: "Jogo criado com sucesso!",
+        description: `${formData.title} está pronto para jogar.`,
+      });
+
+      setFormData({ title: '', description: '', type: '', difficulty: 'medium' });
+
+      // Atualiza lista de jogos
+      const gamesRes = await fetch(`${API_BASE}/games/${user.id}`);
+      const gamesData = await gamesRes.json();
+      setGames(Array.isArray(gamesData) ? gamesData : []);
     } catch (error) {
       toast({
-        title: "Erro na conexão",
-        description: "Não foi possível conectar ao servidor.",
+        title: "Erro",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -106,109 +124,125 @@ const LoginPage = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-100">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-block bg-blue-600 p-4 rounded-full">
-            <GamepadIcon className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-800 mt-4 mb-2">Jogos Educativos</h1>
-          <p className="text-gray-600">Plataforma de aprendizado interativo</p>
+    <div className="min-h-screen flex flex-col p-6 bg-gray-50">
+      <div className="flex items-center gap-4 mb-8">
+        <Button onClick={() => onNavigate('dashboard')} variant="outline">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Voltar
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Gerar Jogos</h1>
+          <p className="text-gray-600">Crie jogos a partir do seu conteúdo</p>
         </div>
+      </div>
 
-        <Card className="bg-white p-6 shadow-lg">
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Cadastro</TabsTrigger>
-            </TabsList>
+      {content.length < 3 && (
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6" role="alert">
+          <p className="font-bold">Atenção</p>
+          <p>Você precisa de pelo menos 3 conteúdos cadastrados para gerar jogos.</p>
+        </div>
+      )}
 
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={loginData.email}
-                    onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={loginData.password}
-                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full bg-blue-600 text-white hover:bg-blue-700" disabled={isLoading}>
-                  {isLoading ? 'Entrando...' : 'Entrar'}
-                </Button>
-              </form>
-            </TabsContent>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <Card className="bg-white shadow-lg lg:col-span-1">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Gamepad2 className="w-5 h-5" />
+              Criar Novo Jogo
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="title">Título do Jogo</Label>
+                <Input
+                  id="title"
+                  placeholder="Digite o título..."
+                  value={formData.title}
+                  onChange={handleChange('title')}
+                  required
+                />
+              </div>
 
-            <TabsContent value="register">
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome</Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="Seu nome"
-                    value={registerData.name}
-                    onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })}
-                    required
-                  />
+              <div className="space-y-2">
+                <Label htmlFor="description">Descrição</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Descreva o jogo..."
+                  value={formData.description}
+                  onChange={handleChange('description')}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tipo de Jogo</Label>
+                <Select onValueChange={handleSelectChange} value={formData.type}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um tipo de jogo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="memory">Jogo da Memória</SelectItem>
+                    <SelectItem value="association">Jogo de Associação</SelectItem>
+                    <SelectItem value="quiz">Quiz</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isLoading || content.length < 3}
+                className="w-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                <Zap className="w-4 h-4 mr-2" />
+                {isLoading ? 'Gerando...' : 'Gerar Jogo'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white shadow-lg lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Gamepad2 className="w-5 h-5" />
+              Jogos Criados ({games.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4 max-h-[600px] overflow-y-auto">
+              {games.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Gamepad2 className="w-12 h-12 mx-auto mb-4" />
+                  <p>Nenhum jogo criado ainda</p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-email">Email</Label>
-                  <Input
-                    id="register-email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={registerData.email}
-                    onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-password">Senha</Label>
-                  <Input
-                    id="register-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={registerData.password}
-                    onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirmar Senha</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={registerData.confirmPassword}
-                    onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full bg-green-600 text-white hover:bg-green-700" disabled={isLoading}>
-                  {isLoading ? 'Cadastrando...' : 'Cadastrar'}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+              ) : (
+                games.map((game) => (
+                  <div key={game.id} className="border rounded-lg p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-semibold">{game.title}</h3>
+                        <p className="text-sm text-gray-600">{game.description}</p>
+                        <span className="text-xs text-gray-500 mt-1 inline-block">
+                          Tipo: {game.type}
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => onPlayGame(game)}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <Play className="w-3 h-3 mr-1" />
+                        Jogar
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
         </Card>
       </div>
     </div>
   );
 };
 
-export default LoginPage;
+export default GameGenerator;
