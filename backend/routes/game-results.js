@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { ObjectId } = require('mongodb');
 
-// Rota para salvar resultado de jogo
 router.post('/', async (req, res) => {
     const resultsCollection = req.app.locals.resultsCollection;
 
@@ -17,24 +16,30 @@ router.post('/', async (req, res) => {
         completedAt
     } = req.body;
 
-    // Valida campos obrigatórios
-    if (!userId || !gameId || score == null || mistakes == null || timeElapsed == null) {
-        return res.status(400).json({ message: 'Dados obrigatórios faltando.' });
+    if (!gameId || !ObjectId.isValid(gameId)) {
+        return res.status(400).json({ message: 'gameId inválido ou ausente.' });
     }
 
-    // Valida apenas o gameId (ObjectId)
-    if (!ObjectId.isValid(gameId)) {
-        return res.status(400).json({ message: 'gameId inválido.' });
+    if (score !== undefined && isNaN(Number(score))) {
+        return res.status(400).json({ message: 'score deve ser um número válido.' });
+    }
+
+    if (mistakes !== undefined && isNaN(Number(mistakes))) {
+        return res.status(400).json({ message: 'mistakes deve ser um número válido.' });
+    }
+
+    if (timeElapsed !== undefined && isNaN(Number(timeElapsed))) {
+        return res.status(400).json({ message: 'timeElapsed deve ser um número válido.' });
     }
 
     const newResult = {
-        userId, // Mantém como string, sem converter para ObjectId
+        userId: userId || '',
         gameId: new ObjectId(gameId),
-        gameTitle,
-        gameType,
-        score,
-        mistakes,
-        timeElapsed,
+        gameTitle: gameTitle || '',
+        gameType: gameType || '',
+        score: Number(score) || 0,
+        mistakes: Number(mistakes) || 0,
+        timeElapsed: Number(timeElapsed) || 0,
         completedAt: completedAt ? new Date(completedAt) : new Date()
     };
 

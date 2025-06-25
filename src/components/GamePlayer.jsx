@@ -58,7 +58,7 @@ const GamePlayer = ({ game, user, onNavigate }) => {
   // Envia resultado para o backend
   const sendResultToBackend = async (result) => {
     try {
-      const response = await fetch('http://localhost:3001/api/results', {
+      const response = await fetch('http://localhost:3001/api/game-results', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(result),
@@ -92,7 +92,7 @@ const GamePlayer = ({ game, user, onNavigate }) => {
 
     const result = {
       userId: user.id,
-      gameId: game.id,
+      gameId: game._id || game.id,  // pega _id primeiro, se existir,
       gameTitle: game.title,
       gameType: game.gameType || game.type, // Corrigido aqui!
       score: finalScore,
