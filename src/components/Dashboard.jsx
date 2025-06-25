@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { 
   BookOpen, 
   Gamepad2, 
@@ -16,9 +15,20 @@ const Dashboard = ({ user, onNavigate, onLogout, onPlayGame }) => {
   const [recentGames, setRecentGames] = useState([]);
 
   useEffect(() => {
-    const games = JSON.parse(localStorage.getItem('games') || '[]');
-    const userGames = games.filter(g => g.userId === user.id).slice(0, 4);
-    setRecentGames(userGames);
+    const fetchGames = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/games');
+        if (!response.ok) {
+          throw new Error('Erro ao buscar jogos');
+        }
+        const data = await response.json();
+        setRecentGames(data.slice(0, 4)); // pega os 4 mais recentes
+      } catch (error) {
+        console.error('Erro ao buscar jogos do back-end:', error);
+      }
+    };
+
+    fetchGames();
   }, [user.id]);
 
   const menuItems = [
@@ -105,7 +115,7 @@ const Dashboard = ({ user, onNavigate, onLogout, onPlayGame }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {recentGames.map((game) => (
                     <div
-                      key={game.id}
+                      key={game.id || game._id}
                       className="border rounded-lg p-4 flex justify-between items-center"
                     >
                       <div>

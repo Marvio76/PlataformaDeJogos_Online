@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle, XCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 
 const AssociationGame = ({ game, onComplete, onMistake }) => {
   const [terms, setTerms] = useState([]);
@@ -14,19 +13,30 @@ const AssociationGame = ({ game, onComplete, onMistake }) => {
   const [feedback, setFeedback] = useState(null);
 
   useEffect(() => {
-    initializeGame();
+    if (game?.data?.length > 0) {
+      initializeGame();
+    } else {
+      setTerms([]);
+      setDefinitions([]);
+    }
   }, [game]);
 
   useEffect(() => {
-    if (matches.length === game.content.length) {
+    if (matches.length === game.data.length) {
       onComplete(score, mistakes);
     }
   }, [matches]);
 
   const initializeGame = () => {
-    const shuffledTerms = [...game.content].sort(() => Math.random() - 0.5);
-    const shuffledDefinitions = [...game.content].sort(() => Math.random() - 0.5);
-    
+    const normalized = game.data.map((item) => ({
+      term: item.term || item.termo || item.title || 'Termo desconhecido',
+      definition: item.definition || item.definição || item.description || 'Definição desconhecida',
+      id: item.id || item._id || Math.random().toString(36).substring(2),
+    }));
+
+    const shuffledTerms = [...normalized].sort(() => Math.random() - 0.5);
+    const shuffledDefinitions = [...normalized].sort(() => Math.random() - 0.5);
+
     setTerms(shuffledTerms);
     setDefinitions(shuffledDefinitions);
     setMatches([]);
@@ -36,11 +46,11 @@ const AssociationGame = ({ game, onComplete, onMistake }) => {
 
   const checkMatch = (term, definition) => {
     if (term.id === definition.id) {
-      setMatches(prev => [...prev, { termId: term.id, definitionId: definition.id }]);
-      setScore(prev => prev + 100);
+      setMatches((prev) => [...prev, { termId: term.id, definitionId: definition.id }]);
+      setScore((prev) => prev + 100);
       setFeedback({ type: 'success', message: 'Correto!' });
     } else {
-      setMistakes(prev => prev + 1);
+      setMistakes((prev) => prev + 1);
       onMistake();
       setFeedback({ type: 'error', message: 'Incorreto!' });
     }
@@ -50,13 +60,13 @@ const AssociationGame = ({ game, onComplete, onMistake }) => {
   };
 
   const handleTermClick = (term) => {
-    if (matches.some(m => m.termId === term.id)) return;
+    if (matches.some((m) => m.termId === term.id)) return;
     setSelectedTerm(term);
     if (selectedDefinition) checkMatch(term, selectedDefinition);
   };
 
   const handleDefinitionClick = (definition) => {
-    if (matches.some(m => m.definitionId === definition.id)) return;
+    if (matches.some((m) => m.definitionId === definition.id)) return;
     setSelectedDefinition(definition);
     if (selectedTerm) checkMatch(selectedTerm, definition);
   };
@@ -64,7 +74,11 @@ const AssociationGame = ({ game, onComplete, onMistake }) => {
   return (
     <div className="max-w-4xl mx-auto">
       {feedback && (
-        <div className={`text-center mb-4 p-3 rounded-lg ${feedback.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+        <div
+          className={`text-center mb-4 p-3 rounded-lg ${
+            feedback.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+          }`}
+        >
           <p className="font-semibold">{feedback.message}</p>
         </div>
       )}
@@ -76,11 +90,15 @@ const AssociationGame = ({ game, onComplete, onMistake }) => {
               <Card
                 key={term.id}
                 onClick={() => handleTermClick(term)}
-                className={`cursor-pointer transition-all ${matches.some(m => m.termId === term.id) ? 'bg-gray-200 opacity-50' : 'bg-white'} ${selectedTerm?.id === term.id ? 'border-blue-500 border-2' : ''}`}
+                className={`cursor-pointer transition-all ${
+                  matches.some((m) => m.termId === term.id) ? 'bg-gray-200 opacity-50' : 'bg-white'
+                } ${selectedTerm?.id === term.id ? 'border-blue-500 border-2' : ''}`}
               >
                 <CardContent className="p-4 flex justify-between items-center">
                   <p className="font-medium">{term.term}</p>
-                  {matches.some(m => m.termId === term.id) && <CheckCircle className="w-5 h-5 text-green-500" />}
+                  {matches.some((m) => m.termId === term.id) && (
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  )}
                 </CardContent>
               </Card>
             ))}
@@ -94,11 +112,15 @@ const AssociationGame = ({ game, onComplete, onMistake }) => {
               <Card
                 key={def.id}
                 onClick={() => handleDefinitionClick(def)}
-                className={`cursor-pointer transition-all ${matches.some(m => m.definitionId === def.id) ? 'bg-gray-200 opacity-50' : 'bg-white'} ${selectedDefinition?.id === def.id ? 'border-blue-500 border-2' : ''}`}
+                className={`cursor-pointer transition-all ${
+                  matches.some((m) => m.definitionId === def.id) ? 'bg-gray-200 opacity-50' : 'bg-white'
+                } ${selectedDefinition?.id === def.id ? 'border-blue-500 border-2' : ''}`}
               >
                 <CardContent className="p-4 flex justify-between items-center">
                   <p className="text-sm">{def.definition}</p>
-                  {matches.some(m => m.definitionId === def.id) && <CheckCircle className="w-5 h-5 text-green-500" />}
+                  {matches.some((m) => m.definitionId === def.id) && (
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  )}
                 </CardContent>
               </Card>
             ))}
