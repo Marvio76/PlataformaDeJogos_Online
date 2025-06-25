@@ -13,6 +13,7 @@ const LoginPage = ({ onLogin }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  // Função para login
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -23,8 +24,8 @@ const LoginPage = ({ onLogin }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: loginData.email,
-          senha: loginData.password
-        })
+          senha: loginData.password  // backend espera "senha"
+        }),
       });
 
       const data = await response.json();
@@ -34,12 +35,27 @@ const LoginPage = ({ onLogin }) => {
           title: "Login realizado",
           description: `Bem-vindo, ${data.usuario.nome}!`,
         });
-        localStorage.setItem("token", data.token);
-        onLogin(data.usuario);
+
+        // Salva token e usuário completo no localStorage
+        localStorage.setItem("currentUser", JSON.stringify({
+          id: data.usuario.id,
+          name: data.usuario.nome,
+          email: data.usuario.email,
+          token: data.token
+        }));
+
+        // Passa para App o usuário com token
+        onLogin({
+          id: data.usuario.id,
+          name: data.usuario.nome,
+          email: data.usuario.email,
+          token: data.token
+        });
+
       } else {
         toast({
           title: "Erro no login",
-          description: data.mensagem,
+          description: data.mensagem || 'Erro desconhecido',
           variant: "destructive",
         });
       }
@@ -54,6 +70,7 @@ const LoginPage = ({ onLogin }) => {
     }
   };
 
+  // Função para cadastro
   const handleRegister = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -75,8 +92,8 @@ const LoginPage = ({ onLogin }) => {
         body: JSON.stringify({
           nome: registerData.name,
           email: registerData.email,
-          senha: registerData.password
-        })
+          senha: registerData.password // backend espera "senha"
+        }),
       });
 
       const data = await response.json();
@@ -90,7 +107,7 @@ const LoginPage = ({ onLogin }) => {
       } else {
         toast({
           title: "Erro no cadastro",
-          description: data.mensagem,
+          description: data.mensagem || 'Erro desconhecido',
           variant: "destructive",
         });
       }
