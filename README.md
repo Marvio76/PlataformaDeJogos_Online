@@ -77,3 +77,4 @@ Este projeto utiliza **MongoDB Atlas**, uma solução de banco de dados NoSQL em
 ### 🌐 Rodando o Front-end
 📦 Em um novo terminal, navegue até a massa do front-end e inicie o servidor:
 - 1 Início ou servidor:
+- npm run dev
