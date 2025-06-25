@@ -52,4 +52,26 @@ router.post('/', async (req, res) => {
     }
 });
 
+
+router.get('/', async (req, res) => {
+    const resultsCollection = req.app.locals.resultsCollection;
+    const { userId } = req.query;
+
+    if (!userId) {
+        return res.status(400).json({ message: 'userId é obrigatório' });
+    }
+
+    try {
+        const results = await resultsCollection
+            .find({ userId })
+            .sort({ completedAt: -1 })
+            .toArray();
+
+        res.json(results);
+    } catch (error) {
+        console.error('Erro ao buscar resultados:', error);
+        res.status(500).json({ message: 'Erro interno ao buscar resultados.' });
+    }
+});
+
 module.exports = router;

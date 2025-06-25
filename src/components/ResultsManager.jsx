@@ -10,11 +10,17 @@ const ResultsManager = ({ user, onNavigate }) => {
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/results/${user.id}`);
+        const response = await fetch(`http://localhost:3001/api/game-results?userId=${user.id}`);
         const data = await response.json();
-        const sortedResults = data.sort(
+
+        // Filtra só os resultados do usuário atual
+        const userResults = data.filter(result => result.userId === user.id);
+
+        // Ordena do mais recente para o mais antigo
+        const sortedResults = userResults.sort(
           (a, b) => new Date(b.completedAt) - new Date(a.completedAt)
         );
+
         setResults(sortedResults);
       } catch (error) {
         console.error('Erro ao buscar resultados:', error);
