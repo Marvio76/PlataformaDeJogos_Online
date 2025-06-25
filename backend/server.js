@@ -30,15 +30,19 @@ async function startServer() {
         app.locals.gamesCollection = db.collection("games");
         app.locals.resultsCollection = db.collection("results");
         app.locals.contentCollection = db.collection("content");
+        app.locals.resultsCollection = db.collection("results");
+        
 
         // 3. Configura as rotas DEPOIS que a conexão está estabelecida
         const authRoutes = require('./routes/auth');
         const gameRoutes = require('./routes/games');
         const contentRoutes = require('./routes/content');
+        const resultsRoutes = require('./routes/game-results');
 
         app.use('/auth', authRoutes); // Rotas de autenticação (ex: /auth/login)
         app.use('/api/games', gameRoutes); // Rotas de jogos
         app.use('/api/content', contentRoutes); // Rotas de conteúdo
+        app.use('/api/game-results', resultsRoutes);
 
         // 4. Inicia o servidor para ouvir as requisições
         app.listen(port, () => {

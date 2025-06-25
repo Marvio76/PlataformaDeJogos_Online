@@ -53,4 +53,25 @@ router.post('/:gameId/results', async (req, res) => {
     }
 });
 
+/// ROTA PARA BUSCAR UM JOGO PELO ID
+router.get('/:gameId', async (req, res) => {
+    const gamesCollection = req.app.locals.gamesCollection;
+    const { gameId } = req.params;
+
+    try {
+        const game = await gamesCollection.findOne({ _id: new ObjectId(gameId) });
+
+        if (!game) {
+            return res.status(404).json({ message: 'Jogo não encontrado.' });
+        }
+
+        res.json(game);
+    } catch (error) {
+        console.error('Erro ao buscar jogo por ID:', error); // Adicione isso para depurar!
+        res.status(500).json({ message: 'Erro ao buscar o jogo.' });
+    }
+});
+
+
+
 module.exports = router;

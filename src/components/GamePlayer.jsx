@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,50 +13,98 @@ const GamePlayer = ({ game, user, onNavigate }) => {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [mistakes, setMistakes] = useState(0);
   const [startTime, setStartTime] = useState(null);
+  const [terms, setTerms] = useState([]); // Conteúdos para o jogo
   const { toast } = useToast();
 
+  // Busca os termos do usuário para o jogo ao carregar / mudar game ou user
   useEffect(() => {
-    setStartTime(Date.now());
+    const fetchTerms = async () => {
+      try {
+        const response = await fetch(`http://localhost:3001/api/content?userId=${user.id}`);
+        if (!response.ok) {
+          throw new Error('Erro ao carregar conteúdos do jogo.');
+        }
+        const data = await response.json();
+        setTerms(data);
+      } catch (error) {
+        toast({
+          title: 'Erro',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+    };
+
+    if (game && user) {
+      fetchTerms();
+      setStartTime(Date.now());
+      setGameState('playing');
+      setScore(0);
+      setMistakes(0);
+      setTimeElapsed(0);
+    }
+  }, [game, user, toast]);
+
+  // Controla o tempo decorrido enquanto joga
+  useEffect(() => {
     const timer = setInterval(() => {
       if (gameState === 'playing' && startTime) {
         setTimeElapsed(Math.floor((Date.now() - startTime) / 1000));
       }
     }, 1000);
-
     return () => clearInterval(timer);
   }, [gameState, startTime]);
 
+  // Envia resultado para o backend
+  const sendResultToBackend = async (result) => {
+    try {
+      const response = await fetch('http://localhost:3001/api/results', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(result),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao salvar resultado');
+      }
+      toast({
+        title: 'Resultado salvo',
+        description: `Seu resultado para ${game.title} foi salvo com sucesso.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: `Não foi possível salvar o resultado: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Quando jogo finaliza, atualiza estado e envia resultado
   const handleGameComplete = (finalScore, finalMistakes) => {
     const endTime = Date.now();
     const totalTime = Math.floor((endTime - (startTime || endTime)) / 1000);
-    
+
     setScore(finalScore);
     setMistakes(finalMistakes);
     setTimeElapsed(totalTime);
     setGameState('finished');
 
     const result = {
-      id: Date.now(),
       userId: user.id,
       gameId: game.id,
       gameTitle: game.title,
-      gameType: game.type,
+      gameType: game.gameType || game.type, // Corrigido aqui!
       score: finalScore,
       mistakes: finalMistakes,
       timeElapsed: totalTime,
-      completedAt: new Date().toISOString()
+      completedAt: new Date().toISOString(),
     };
 
-    const allResults = JSON.parse(localStorage.getItem('gameResults') || '[]');
-    allResults.push(result);
-    localStorage.setItem('gameResults', JSON.stringify(allResults));
-
-    toast({
-      title: "Parabéns!",
-      description: `Você completou ${game.title} com ${finalScore} pontos!`,
-    });
+    sendResultToBackend(result);
   };
 
+  // Reinicia o jogo para jogar novamente
   const handleRestart = () => {
     setGameState('playing');
     setScore(0);
@@ -66,39 +113,49 @@ const GamePlayer = ({ game, user, onNavigate }) => {
     setStartTime(Date.now());
   };
 
+  // Formata tempo para mm:ss
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Pega o tipo correto do jogo (com fallback para type)
+  const gameType = (game.gameType || game.type || '').toLowerCase();
+
+  // Renderiza o jogo correto passando os termos
   const renderGame = () => {
     const gameProps = {
       game,
+      terms,
       onComplete: handleGameComplete,
-      onMistake: () => setMistakes(prev => prev + 1)
+      onMistake: () => setMistakes((prev) => prev + 1),
     };
 
-    switch (game.type) {
-      case 'memory':
-        return <MemoryGame {...gameProps} />;
-      case 'association':
-        return <AssociationGame {...gameProps} />;
-      case 'quiz':
-        return <QuizGame {...gameProps} />;
-      default:
-        return <div>Tipo de jogo não suportado</div>;
+    try {
+      switch (gameType) {
+        case 'memory':
+          return <MemoryGame {...gameProps} />;
+        case 'association':
+          return <AssociationGame {...gameProps} />;
+        case 'quiz':
+          return <QuizGame {...gameProps} />;
+        default:
+          return <div>Tipo de jogo não suportado</div>;
+      }
+    } catch (error) {
+      console.error('Erro ao renderizar jogo:', error);
+      return <div>Erro ao carregar o jogo.</div>;
     }
   };
+
 
   if (!game) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-xl mb-4">Jogo não encontrado</p>
-          <Button onClick={() => onNavigate('dashboard')}>
-            Voltar ao Dashboard
-          </Button>
+          <Button onClick={() => onNavigate('dashboard')}>Voltar ao Dashboard</Button>
         </div>
       </div>
     );
@@ -136,9 +193,7 @@ const GamePlayer = ({ game, user, onNavigate }) => {
 
       <main>
         {gameState === 'playing' ? (
-          <div>
-            {renderGame()}
-          </div>
+          <div>{renderGame()}</div>
         ) : (
           <div className="flex items-center justify-center min-h-[400px]">
             <Card className="bg-white shadow-lg max-w-md w-full">
@@ -163,11 +218,18 @@ const GamePlayer = ({ game, user, onNavigate }) => {
                 </div>
 
                 <div className="flex gap-2 pt-4">
-                  <Button onClick={handleRestart} className="flex-1 bg-blue-600 text-white hover:bg-blue-700">
+                  <Button
+                    onClick={handleRestart}
+                    className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
+                  >
                     <RotateCcw className="w-4 h-4 mr-2" />
                     Jogar Novamente
                   </Button>
-                  <Button onClick={() => onNavigate('dashboard')} variant="outline" className="flex-1">
+                  <Button
+                    onClick={() => onNavigate('dashboard')}
+                    variant="outline"
+                    className="flex-1"
+                  >
                     <CheckCircle className="w-4 h-4 mr-2" />
                     Finalizar
                   </Button>
