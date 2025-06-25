@@ -13,35 +13,31 @@ const QuizGame = ({ game, onComplete, onMistake }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('QuizGame mount/update:', { game });
-
     const fetchGameWithContent = async () => {
       setLoading(true);
-      const url = `http://localhost:3001/api/games/${game._id}`;
-      console.log('Fetching game from:', url);
-
       try {
-        const response = await fetch(url);
-        console.log('  response.ok:', response.ok, 'status:', response.status);
-        if (!response.ok) {
-          throw new Error(`Erro ao carregar jogo (status ${response.status})`);
-        }
-
+        const response = await fetch(`http://localhost:3001/api/games/${game._id}`);
+        if (!response.ok) throw new Error(`Erro ao carregar jogo (status ${response.status})`);
         const gameData = await response.json();
-        console.log('  gameData received:', gameData);
 
-        // Aqui pegamos o array direto do gameData.data
         const allContent = gameData.data || [];
-        console.log('  allContent:', allContent);
 
         if (allContent.length === 0) {
           setQuestions([]);
           return;
         }
 
-        // Monta perguntas usando term e definition do seu JSON
-        const gameQuestions = allContent.map(item => {
-          const wrongAnswers = allContent
+        // Normaliza o conteúdo para dois formatos possíveis
+        // Se tiver 'term', usa term/definition, senão usa title/description
+        const normalizedContent = allContent.map(item => ({
+          term: item.term || item.termo || item.title || 'Termo desconhecido',
+          definition: item.definition || item.definição || item.description || 'Definição desconhecida',
+          id: item.id || item._id,
+        }));
+
+        // Cria perguntas para o quiz
+        const gameQuestions = normalizedContent.map(item => {
+          const wrongAnswers = normalizedContent
             .filter(c => c.id !== item.id)
             .sort(() => 0.5 - Math.random())
             .slice(0, 3)
@@ -52,7 +48,7 @@ const QuizGame = ({ game, onComplete, onMistake }) => {
           return {
             question: `O que significa "${item.term}"?`,
             options,
-            correctAnswer: item.definition
+            correctAnswer: item.definition,
           };
         });
 
@@ -73,7 +69,6 @@ const QuizGame = ({ game, onComplete, onMistake }) => {
     if (game && game._id) {
       fetchGameWithContent();
     } else {
-      console.warn('QuizGame skipped fetchGameWithContent because game or game._id is missing');
       setQuestions([]);
       setLoading(false);
     }
@@ -102,13 +97,8 @@ const QuizGame = ({ game, onComplete, onMistake }) => {
     }
   };
 
-  if (loading) {
-    return <div className="text-center p-8">Carregando perguntas...</div>;
-  }
-
-  if (questions.length === 0) {
-    return <div className="text-center p-8">Nenhuma pergunta disponível.</div>;
-  }
+  if (loading) return <div className="text-center p-8">Carregando perguntas...</div>;
+  if (questions.length === 0) return <div className="text-center p-8">Nenhuma pergunta disponível.</div>;
 
   const question = questions[currentQuestion];
   const progress = ((currentQuestion + 1) / questions.length) * 100;
@@ -124,7 +114,7 @@ const QuizGame = ({ game, onComplete, onMistake }) => {
           <div
             className="bg-blue-600 h-2.5 rounded-full"
             style={{ width: `${progress}%` }}
-          ></div>
+          />
         </div>
       </div>
 
