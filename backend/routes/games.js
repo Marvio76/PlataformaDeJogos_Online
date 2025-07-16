@@ -1,14 +1,30 @@
 const express = require('express');
 const router = express.Router();
-const Game = require('../models/Game');
 const { ObjectId } = require('mongodb');
 
 // ROTA PARA BUSCAR TODOS OS JOGOS
+// Filtra para mostrar:
+// - jogos públicos para todos
+// - jogos privados somente do usuário que solicitou (via query ?userId=...)
 router.get('/', async (req, res) => {
     const gamesCollection = req.app.locals.gamesCollection;
+    const userId = req.query.userId;
+
     try {
-        const games = await gamesCollection.find().sort({ createdAt: -1 }).toArray();
-        res.json(games);
+        const allGames = await gamesCollection.find().sort({ createdAt: -1 }).toArray();
+
+        // Filtra jogos para retornar conforme visibilidade
+        const filteredGames = allGames.filter(game => {
+            if (game.visibility === 'public') {
+                return true;
+            }
+            if (game.visibility === 'private' && game.createdBy === userId) {
+                return true;
+            }
+            return false;
+        });
+
+        res.json(filteredGames);
     } catch (err) {
         res.status(500).json({ message: "Erro ao buscar os jogos." });
     }
@@ -17,8 +33,18 @@ router.get('/', async (req, res) => {
 // ROTA PARA CRIAR UM NOVO JOGO
 router.post('/', async (req, res) => {
     const gamesCollection = req.app.locals.gamesCollection;
-    const { title, description, gameType, data, createdBy } = req.body;
-    const gameDocument = { title, description, gameType, data, createdBy, createdAt: new Date() };
+    const { title, description, gameType, data, createdBy, visibility } = req.body;
+
+    // Define visibility como 'private' se não informado
+    const gameDocument = {
+        title,
+        description,
+        gameType,
+        data,
+        createdBy,
+        visibility: visibility || 'private',
+        createdAt: new Date()
+    };
 
     try {
         const result = await gamesCollection.insertOne(gameDocument);
@@ -53,7 +79,7 @@ router.post('/:gameId/results', async (req, res) => {
     }
 });
 
-/// ROTA PARA BUSCAR UM JOGO PELO ID
+// ROTA PARA BUSCAR UM JOGO PELO ID
 router.get('/:gameId', async (req, res) => {
     const gamesCollection = req.app.locals.gamesCollection;
     const { gameId } = req.params;
@@ -67,11 +93,9 @@ router.get('/:gameId', async (req, res) => {
 
         res.json(game);
     } catch (error) {
-        console.error('Erro ao buscar jogo por ID:', error); // Adicione isso para depurar!
+        console.error('Erro ao buscar jogo por ID:', error);
         res.status(500).json({ message: 'Erro ao buscar o jogo.' });
     }
 });
-
-
 
 module.exports = router;

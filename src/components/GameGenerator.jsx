@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, Gamepad2, Play, Zap } from 'lucide-react';
+import { ArrowLeft, Gamepad2, Play, Zap, Lock, Globe } from 'lucide-react';
 
 const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
   const [content, setContent] = useState([]);
@@ -16,6 +16,7 @@ const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
     description: '',
     type: '',
     difficulty: 'medium',
+    visibility: 'private'
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
@@ -26,22 +27,21 @@ const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
   }, [user.id]);
 
   const loadContent = async () => {
-  try {
-    const response = await fetch(`http://localhost:3001/api/content?userId=${user.id}`);
-    if (!response.ok) {
-      throw new Error('Erro ao buscar conteúdos do servidor');
+    try {
+      const response = await fetch(`http://localhost:3001/api/content?userId=${user.id}`);
+      if (!response.ok) {
+        throw new Error('Erro ao buscar conteúdos do servidor');
+      }
+      const data = await response.json();
+      setContent(data);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível carregar os conteúdos.",
+        variant: "destructive",
+      });
     }
-    const data = await response.json();
-    setContent(data);
-  } catch (error) {
-    toast({
-      title: "Erro",
-      description: error.message || "Não foi possível carregar os conteúdos.",
-      variant: "destructive",
-    });
-  }
-};
-
+  };
 
   const loadGames = async () => {
     try {
@@ -83,6 +83,7 @@ const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
       gameType: formData.type,
       data: selectedContent,
       createdBy: user.id,
+      visibility: formData.visibility
     };
 
     try {
@@ -97,7 +98,7 @@ const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
           title: "Jogo criado com sucesso!",
           description: `${formData.title} está pronto para jogar.`,
         });
-        setFormData({ title: '', description: '', type: '', difficulty: 'medium' });
+        setFormData({ title: '', description: '', type: '', difficulty: 'medium', visibility: 'private' });
         loadGames();
       } else {
         const errorData = await response.json();
@@ -183,6 +184,32 @@ const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
                   </Select>
                 </div>
 
+                <div className="space-y-2">
+                  <Label>Visibilidade</Label>
+                  <Select
+                    value={formData.visibility}
+                    onValueChange={(value) => setFormData({ ...formData, visibility: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Escolha a visibilidade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="public">
+                        <div className="flex items-center gap-2">
+                          <Globe className="w-4 h-4" />
+                          Público
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="private">
+                        <div className="flex items-center gap-2">
+                          <Lock className="w-4 h-4" />
+                          Privado
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <Button
                   type="submit"
                   disabled={isGenerating || content.length < 3}
@@ -218,9 +245,20 @@ const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
                         <div>
                           <h3 className="font-semibold">{game.title}</h3>
                           <p className="text-sm text-gray-600">{game.description}</p>
-                          <span className="text-xs text-gray-500 mt-1 inline-block">
-                            Tipo: {game.gameType}
-                          </span>
+                          <div className="flex gap-3 mt-2 text-xs text-gray-500">
+                            <span>Tipo: {game.gameType}</span>
+                            <span className="flex items-center gap-1">
+                              {game.visibility === 'public' ? (
+                                <>
+                                  <Globe className="w-3 h-3 text-green-600" /> Público
+                                </>
+                              ) : (
+                                <>
+                                  <Lock className="w-3 h-3 text-gray-600" /> Privado
+                                </>
+                              )}
+                            </span>
+                          </div>
                         </div>
                         <Button
                           size="sm"
