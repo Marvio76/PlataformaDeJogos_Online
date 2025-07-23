@@ -6,6 +6,7 @@ import { ArrowLeft, Trophy, Clock, Target, RotateCcw, CheckCircle } from 'lucide
 import MemoryGame from '@/components/games/MemoryGame';
 import AssociationGame from '@/components/games/AssociationGame';
 import QuizGame from '@/components/games/QuizGame';
+import GuessTermGame from '@/components/games/GuessTermGame'; // Importação do novo jogo
 
 const GamePlayer = ({ game, user, onNavigate }) => {
   const [gameState, setGameState] = useState('playing');
@@ -13,10 +14,9 @@ const GamePlayer = ({ game, user, onNavigate }) => {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [mistakes, setMistakes] = useState(0);
   const [startTime, setStartTime] = useState(null);
-  const [terms, setTerms] = useState([]); // Conteúdos para o jogo
+  const [terms, setTerms] = useState([]);
   const { toast } = useToast();
 
-  // Busca os termos do usuário para o jogo ao carregar / mudar game ou user
   useEffect(() => {
     const fetchTerms = async () => {
       try {
@@ -45,7 +45,6 @@ const GamePlayer = ({ game, user, onNavigate }) => {
     }
   }, [game, user, toast]);
 
-  // Controla o tempo decorrido enquanto joga
   useEffect(() => {
     const timer = setInterval(() => {
       if (gameState === 'playing' && startTime) {
@@ -55,7 +54,6 @@ const GamePlayer = ({ game, user, onNavigate }) => {
     return () => clearInterval(timer);
   }, [gameState, startTime]);
 
-  // Envia resultado para o backend
   const sendResultToBackend = async (result) => {
     try {
       const response = await fetch('http://localhost:3001/api/game-results', {
@@ -80,7 +78,6 @@ const GamePlayer = ({ game, user, onNavigate }) => {
     }
   };
 
-  // Quando jogo finaliza, atualiza estado e envia resultado
   const handleGameComplete = (finalScore, finalMistakes) => {
     const endTime = Date.now();
     const totalTime = Math.floor((endTime - (startTime || endTime)) / 1000);
@@ -92,9 +89,9 @@ const GamePlayer = ({ game, user, onNavigate }) => {
 
     const result = {
       userId: user.id,
-      gameId: game._id || game.id,  // pega _id primeiro, se existir,
+      gameId: game._id || game.id,
       gameTitle: game.title,
-      gameType: game.gameType || game.type, // Corrigido aqui!
+      gameType: game.gameType || game.type,
       score: finalScore,
       mistakes: finalMistakes,
       timeElapsed: totalTime,
@@ -104,7 +101,6 @@ const GamePlayer = ({ game, user, onNavigate }) => {
     sendResultToBackend(result);
   };
 
-  // Reinicia o jogo para jogar novamente
   const handleRestart = () => {
     setGameState('playing');
     setScore(0);
@@ -113,17 +109,14 @@ const GamePlayer = ({ game, user, onNavigate }) => {
     setStartTime(Date.now());
   };
 
-  // Formata tempo para mm:ss
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Pega o tipo correto do jogo (com fallback para type)
   const gameType = (game.gameType || game.type || '').toLowerCase();
 
-  // Renderiza o jogo correto passando os termos
   const renderGame = () => {
     const gameProps = {
       game,
@@ -140,6 +133,16 @@ const GamePlayer = ({ game, user, onNavigate }) => {
           return <AssociationGame {...gameProps} />;
         case 'quiz':
           return <QuizGame {...gameProps} />;
+        case 'guess-term':
+          return (
+            <GuessTermGame
+              game={game}
+              onFinish={(finalScore, finalMistakes) => {
+                setGameState('finished');
+                handleGameComplete(finalScore, finalMistakes); // usa os valores corretos!
+              }}
+            />
+          );
         default:
           return <div>Tipo de jogo não suportado</div>;
       }
@@ -148,7 +151,6 @@ const GamePlayer = ({ game, user, onNavigate }) => {
       return <div>Erro ao carregar o jogo.</div>;
     }
   };
-
 
   if (!game) {
     return (

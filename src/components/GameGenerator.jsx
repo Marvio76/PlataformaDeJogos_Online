@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { ArrowLeft, Gamepad2, Play, Zap, Lock, Globe } from 'lucide-react';
+import GuessTermGame from './games/GuessTermGame';
 
 const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
   const [content, setContent] = useState([]);
@@ -20,6 +21,7 @@ const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
+  const [activeGame, setActiveGame] = useState(null);
 
   useEffect(() => {
     loadContent();
@@ -119,6 +121,25 @@ const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
     }
   };
 
+  // Função para jogar
+  const handlePlayGame = (game) => {
+    if (game.gameType === 'guess-term') {
+      setActiveGame(game);
+    } else {
+      onPlayGame(game);
+    }
+  };
+
+  // Renderização condicional para GuessTermGame
+  if (activeGame && activeGame.gameType === 'guess-term') {
+    return (
+      <GuessTermGame
+        game={activeGame}
+        onFinish={() => setActiveGame(null)}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen p-6">
       <div className="flex items-center gap-4 mb-8">
@@ -180,6 +201,7 @@ const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
                       <SelectItem value="memory">Jogo da Memória</SelectItem>
                       <SelectItem value="association">Jogo de Associação</SelectItem>
                       <SelectItem value="quiz">Quiz</SelectItem>
+                      <SelectItem value="guess-term">Quem é? (Adivinhe o Termo)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -262,7 +284,7 @@ const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
                         </div>
                         <Button
                           size="sm"
-                          onClick={() => onPlayGame(game)}
+                          onClick={() => handlePlayGame(game)}
                           className="bg-green-600 hover:bg-green-700 text-white"
                         >
                           <Play className="w-3 h-3 mr-1" />

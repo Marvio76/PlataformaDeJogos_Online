@@ -43,10 +43,10 @@ const ResultsManager = ({ user, onNavigate }) => {
       case 'memory': return 'Memória';
       case 'association': return 'Associação';
       case 'quiz': return 'Quiz';
+      case 'guess-term': return 'Quem é?';
       default: return type;
     }
   };
-
   return (
     <div className="min-h-screen p-6">
       <div className="flex items-center gap-4 mb-8">

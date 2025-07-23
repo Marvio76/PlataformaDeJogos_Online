@@ -237,6 +237,7 @@ const Dashboard = ({ user, onNavigate, onLogout, onPlayGame }) => {
               <option value="memory">Memória</option>
               <option value="association">Associação</option>
               <option value="quiz">Quiz</option>
+              <option value="guess-term">Quem é? (Adivinhe o Termo)</option>
             </select>
             <select
               value={filterVisibility}
