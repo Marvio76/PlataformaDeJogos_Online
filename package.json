@@ -7,10 +7,10 @@
     "node": "20.x"
   },
   "scripts": {
-    "dev": "vite",
-    "build": "npx vite build",
-    "preview": "vite preview"
-  },
+  "dev": "vite",
+  "build": "npx vite build",
+  "preview": "vite preview"
+},
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.0.5",
     "@radix-ui/react-avatar": "^1.0.3",
