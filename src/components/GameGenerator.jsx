@@ -30,7 +30,7 @@ const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
 
   const loadContent = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/content?userId=${user.id}`);
+      const response = await fetch(`https://plataformadejogos-online.onrender.com/api/content?userId=${user.id}`);
       if (!response.ok) {
         throw new Error('Erro ao buscar conteúdos do servidor');
       }
@@ -47,7 +47,7 @@ const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
 
   const loadGames = async () => {
     try {
-      const response = await fetch("http://localhost:3001/api/games");
+      const response = await fetch("https://plataformadejogos-online.onrender.com/api/games");
       if (!response.ok) {
         throw new Error('Erro ao buscar jogos do servidor');
       }
@@ -89,7 +89,7 @@ const GameGenerator = ({ user, onNavigate, onPlayGame }) => {
     };
 
     try {
-      const response = await fetch("http://localhost:3001/api/games", {
+      const response = await fetch("https://plataformadejogos-online.onrender.com/api/games", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newGame),

@@ -10,7 +10,7 @@ const ResultsManager = ({ user, onNavigate }) => {
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/api/game-results?userId=${user.id}`);
+        const response = await fetch(`https://plataformadejogos-online.onrender.com/api/game-results?userId=${user.id}`);
         const data = await response.json();
 
         // Filtra só os resultados do usuário atual

@@ -28,11 +28,11 @@ const Dashboard = ({ user, onNavigate, onLogout, onPlayGame }) => {
     const fetchAllGames = async () => {
       setLoading(true);
       try {
-        const resGames = await fetch(`http://localhost:3001/api/games?userId=${user.id}`);
+        const resGames = await fetch(`https://plataformadejogos-online.onrender.com/api/games?userId=${user.id}`);
         const dataGames = resGames.ok ? await resGames.json() : [];
         setGames(dataGames.slice(0, 20));
 
-        const resShared = await fetch(`http://localhost:3001/api/shared-games?userId=${user.id}`);
+        const resShared = await fetch(`https://plataformadejogos-online.onrender.com/api/shared-games?userId=${user.id}`);
         let dataShared = resShared.ok ? await resShared.json() : [];
         if (!Array.isArray(dataShared)) dataShared = [dataShared];
         setSharedGames(
@@ -78,7 +78,7 @@ const Dashboard = ({ user, onNavigate, onLogout, onPlayGame }) => {
       searchGames = [externalSharedGame];
     } else {
       // Busca externa se não achou localmente
-      fetch(`http://localhost:3001/api/shared-games/by-code/${searchTerm}`)
+      fetch(`https://plataformadejogos-online.onrender.com/api/shared-games/by-code/${searchTerm}`)
         .then(res => res.ok ? res.json() : null)
         .then(data => {
           if (data) setExternalSharedGame({
@@ -289,7 +289,7 @@ const Dashboard = ({ user, onNavigate, onLogout, onPlayGame }) => {
                             // Se for um jogo compartilhado e tiver gameId, busque o jogo real
                             if (game.shareCode && game.gameId) {
                               try {
-                                const res = await fetch(`http://localhost:3001/api/games/${game.gameId}`);
+                                const res = await fetch(`https://plataformadejogos-online.onrender.com/api/games/${game.gameId}`);
                                 if (res.ok) {
                                   const fullGame = await res.json();
                                   onPlayGame(fullGame);

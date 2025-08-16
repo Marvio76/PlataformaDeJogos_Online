@@ -16,7 +16,7 @@ const QuizGame = ({ game, onComplete, onMistake }) => {
     const fetchGameWithContent = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`http://localhost:3001/api/games/${game._id}`);
+        const response = await fetch(`https://plataformadejogos-online.onrender.com/api/games/${game._id}`);
         if (!response.ok) throw new Error(`Erro ao carregar jogo (status ${response.status})`);
         const gameData = await response.json();
 

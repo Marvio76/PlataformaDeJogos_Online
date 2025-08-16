@@ -25,7 +25,7 @@ const ContentManager = ({ user, onNavigate }) => {
 
   const loadContent = async () => {
     try {
-      const response = await axios.get('http://localhost:3001/api/content');
+      const response = await axios.get('https://plataformadejogos-online.onrender.com/api/content');
       // Filtra o conteúdo criado pelo usuário logado
       const userContent = response.data.filter(c => c.createdBy === user.id);
       setContent(userContent);
@@ -53,7 +53,7 @@ const ContentManager = ({ user, onNavigate }) => {
     try {
       if (isEditing) {
         // Atualiza conteúdo via PUT na rota correta
-        await axios.put(`http://localhost:3001/api/content/${editingId}`, {
+        await axios.put(`https://plataformadejogos-online.onrender.com/api/content/${editingId}`, {
           title: formData.term,
           description: formData.definition,
           createdBy: user.id,
@@ -66,7 +66,7 @@ const ContentManager = ({ user, onNavigate }) => {
         });
       } else {
         // Cria novo conteúdo via POST na rota correta
-        await axios.post('http://localhost:3001/api/content', {
+        await axios.post('https://plataformadejogos-online.onrender.com/api/content', {
           title: formData.term,
           description: formData.definition,
           createdBy: user.id,
@@ -100,7 +100,7 @@ const ContentManager = ({ user, onNavigate }) => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`http://localhost:3001/api/content/${id}`);
+      await axios.delete(`https://plataformadejogos-online.onrender.com/api/content/${id}`);
 
       toast({
         title: "Sucesso!",

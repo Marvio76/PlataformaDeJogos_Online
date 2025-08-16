@@ -16,7 +16,7 @@ const ShareManager = ({ user, onNavigate }) => {
   const loadGames = async () => {
     setLoadingGames(true);
     try {
-      const res = await fetch(`http://localhost:3001/api/games?userId=${user.id}`);
+      const res = await fetch(`https://plataformadejogos-online.onrender.com/api/games?userId=${user.id}`);
       if (!res.ok) throw new Error('Erro ao carregar jogos');
       const data = await res.json();
       setGames(data);
@@ -31,7 +31,7 @@ const ShareManager = ({ user, onNavigate }) => {
   const loadSharedGames = async () => {
     setLoadingShared(true);
     try {
-      const res = await fetch(`http://localhost:3001/api/shared-games?userId=${user.id}`);
+      const res = await fetch(`https://plataformadejogos-online.onrender.com/api/shared-games?userId=${user.id}`);
       if (!res.ok) throw new Error('Erro ao carregar jogos compartilhados');
       const data = await res.json();
       setSharedGames(data);
@@ -65,7 +65,7 @@ const ShareManager = ({ user, onNavigate }) => {
     };
 
     try {
-      const res = await fetch('http://localhost:3001/api/shared-games', {
+      const res = await fetch('https://plataformadejogos-online.onrender.com/api/shared-games', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(shareData),

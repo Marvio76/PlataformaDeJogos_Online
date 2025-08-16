@@ -20,7 +20,7 @@ const GamePlayer = ({ game, user, onNavigate }) => {
   useEffect(() => {
     const fetchTerms = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/api/content?userId=${user.id}`);
+        const response = await fetch(`https://plataformadejogos-online.onrender.com/api/content?userId=${user.id}`);
         if (!response.ok) {
           throw new Error('Erro ao carregar conteúdos do jogo.');
         }
@@ -56,7 +56,7 @@ const GamePlayer = ({ game, user, onNavigate }) => {
 
   const sendResultToBackend = async (result) => {
     try {
-      const response = await fetch('http://localhost:3001/api/game-results', {
+      const response = await fetch('https://plataformadejogos-online.onrender.com/api/game-results', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(result),
